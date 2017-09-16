@@ -8,7 +8,7 @@ sub MAIN($file, $order = 2, $maxwords = 75, $finalword = "") {
 # Read the file from source, put it in a data structure,
 #  save the data structure to file.
 sub markov_read($file, $order) {
-	my @input = $file.IO.lines;
+	my $input = $file.IO.slurp;
 	my $empty = "".Str;
 	my @prefix;
 	my %table;
@@ -17,21 +17,21 @@ sub markov_read($file, $order) {
 		@prefix[$i] = $empty;
 	}
 
-	for @input -> $line {
-		my @words = $line.words;
+	my @words = $input.words;
+	my $key;
 
-		# Add the entire line
-		for @words -> $word {
-			if (!defined(%table{@prefix.join})) {
-				%table.append(@prefix.join => [$word]);
-			} else {
-				%table{@prefix.join}.append($word);
-			}
+	# Add the entire line
+	for @words -> $word {
+		$key = @prefix.join;
 
-			@prefix.shift;
-			@prefix[$order - 1] = $word;
+		if (defined(%table{$key})) {
+			%table{$key}.append($word);
+		} else {
+			%table.append($key => [$word]);
 		}
 
+		@prefix.shift;
+		@prefix[$order - 1] = $word;
 	}
 
 	return %table;
@@ -51,16 +51,16 @@ sub markov_gen(%table, $order, $maxwords, $finalword) {
 	my $wordc = 0;
 	my $index = %table{@prefix.join}.elems.rand.Int;
 	my $word = %table{@prefix.join}[$index];
+	my $key;
 	while ($word !eq $finalword && $wordc < $maxwords) { 
-		$index = %table{@prefix.join}.elems.rand.Int;
-		$word = %table{@prefix.join}[$index];
+		$key = @prefix.join;
+		$index = %table{$key}.elems.rand.Int;
+		$word = %table{$key}[$index];
 
-		if ($word !eq $empty) {
-			@output.append($word);
-			@prefix.shift;
-			@prefix[$order - 1] = $word;
-			$wordc++;
-		}
+		@output.append($word);
+		@prefix.shift;
+		@prefix[$order - 1] = $word;
+		$wordc++;
 	}
 
 	return @output.join(" ");
